@@ -1,4 +1,6 @@
 # 展示圖
+* 感謝不願意具名的老師提供模組展示及範例
+
 ![image](https://github.com/chris81605/Special-Pose-Extension-/blob/main/%E7%AF%84%E4%BE%8B/Image_1772368235413.jpg)
 ![image](https://github.com/chris81605/Special-Pose-Extension-/blob/main/%E7%AF%84%E4%BE%8B/Image_1772368237341.png)
 ![image](https://github.com/chris81605/Special-Pose-Extension-/blob/main/%E7%AF%84%E4%BE%8B/Image_1772368239354.png)
