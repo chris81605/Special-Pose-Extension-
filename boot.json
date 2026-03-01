@@ -1,0 +1,43 @@
+{
+  "name": "特姿拓展",
+  "version": "1.1.1",
+  "styleFileList": [
+  ],
+  "scriptFileList_earlyload": [
+    "scriptEarly/FWdetector.js"
+  ],
+  "scriptFileList_inject_early": [
+  ],
+  "scriptFileList_preload": [],
+  "scriptFileList": [
+    "scripts/specialBody.js",
+  ],
+  "tweeFileList": [
+  ],
+  "imgFileList": [],
+  "additionFile": [
+    "readme.md"
+  ],
+    "addonPlugin": [
+    {
+      "modName": "ReplacePatcher",
+      "addonName": "ReplacePatcherAddon",
+      "modVersion": "1.2.0",
+      "params": {
+        "js": [],
+      "twee":[]
+      }
+    }
+  ],
+  
+  "dependenceInfo": [
+    {
+      "modName": "SweetAlert2Mod",
+      "version": "^1.0.0"
+    },
+    {
+      "modName": "maplebirch",
+      "version": ">=3.0.15"
+    } 
+  ]
+}
