@@ -82,6 +82,7 @@ function checkSpecialKey(specialKey = "isSpecial") {
 
 // ===============================
 // 檢測特殊上衣資源有效性（只檢查 upper）
+// 新版 / 舊版素材兼容
 // ===============================
 
 async function detectSpecialUpperAssets() {
@@ -91,12 +92,12 @@ async function detectSpecialUpperAssets() {
 
     const item = V.worn?.upper;
     if (!item) return;
-   
-   if (!setup.specialBody.flag) return;
+
+    if (!setup.specialBody.flag) return;
 
     const basePath = `img/clothes/upper/${item.name}`; // 假設路徑結構
     const cache = {};
-    
+
     const breastSize = V?.player?.perceived_breastsize;
 
     // 判斷圖片是否存在
@@ -109,11 +110,49 @@ async function detectSpecialUpperAssets() {
         }
     }
 
+    // 從多個候選路徑中找第一個存在的
+    async function findFirstExisting(paths) {
+        for (const path of paths) {
+            if (await exists(path)) {
+                return path;
+            }
+        }
+        return null;
+    }
+
     // 檢查圖層
-    cache.base = await exists(`${basePath}/body/basenoarms.png`);
-    cache.leftarm = await exists(`${basePath}/body/leftarm.png`);
-    cache.rightarm = await exists(`${basePath}/body/rightarm.png`);
-    cache.breasts = await exists(`${basePath}/body/breasts${breastSize}.png`);    
+    // 回傳值不再是 true / false，而是「實際可用圖片路徑」
+    cache.base = await findFirstExisting([
+        // 新版命名
+        `${basePath}/body/base-body.png`,
+
+        // 舊版命名
+        `${basePath}/body/basenoarms.png`
+    ]);
+
+    cache.leftarm = await findFirstExisting([
+        // 新版命名
+        `${basePath}/body/left-arm-idle.png`,
+
+        // 舊版命名
+        `${basePath}/body/leftarm.png`
+    ]);
+
+    cache.rightarm = await findFirstExisting([
+        // 新版命名
+        `${basePath}/body/right-arm-idle.png`,
+
+        // 舊版命名
+        `${basePath}/body/rightarm.png`
+    ]);
+
+    cache.breasts = await findFirstExisting([
+        // 新版命名
+        `${basePath}/body/breasts-${breastSize}.png`,
+
+        // 舊版命名
+        `${basePath}/body/breasts${breastSize}.png`
+    ]);
 
     // 緩存檢測結果
     setup.specialBody.assets.upper = cache;
@@ -144,15 +183,20 @@ function applySpecialBodyLayers() {
 
                     // ①-1 資源存在
                     if (setup.specialBody.assets?.upper?.base) {
-                        return `img/clothes/upper/${bodyFolder}/body/basenoarms.png`;
+                        return setup.specialBody.assets?.upper?.base;
                     }
 
                     // ①-2 有特質但沒資源
                     return null;
                 }
 
-                // ② 原版路徑
-                return options.mannequin ? "img/body/mannequin/basenoarms.png" : `img/body/basenoarms-${options.body_type}.png`;
+                // ② 原版
+                // 新版路徑：
+                // 舊版 basenoarms-${options.body_type}.png
+                // 新版 base-${options.body_type}.png
+                return options.mannequin
+                    ? "img/body/mannequin/base-body.png"
+                    : `img/body/base-${options.body_type}.png`;
             }
         },
 
@@ -163,14 +207,13 @@ function applySpecialBodyLayers() {
                 
                 const mannequin = (options.mannequin) ? "mannequin/" : "";
 				const prefix = `img/body/${mannequin}`;
-				const suffix = options.breasts === "cleavage" && options.breast_size >= 3 ? "_clothed.png" : ".png";
 				
                 // ① 有特質
                 if (hasSpecial) {
 
                     // ①-1 有資源
                     if (setup.specialBody.assets?.upper?.breasts) {
-                        return `img/clothes/upper/${bodyFolder}/body/breasts${options.breast_size}.png`;
+                        return setup.specialBody.assets?.upper?.breasts;
                     }
 
                     // ①-2 無資源
@@ -178,8 +221,14 @@ function applySpecialBodyLayers() {
                 }
 
                 // ② 原版
-                
-				return `${prefix}breasts/breasts${options.breast_size}${suffix}`;                
+                // 新版路徑：
+                // 舊版 breasts${size}.png / breasts${size}_clothed.png
+                // 新版 breasts-${size}.png / clothed-${size}.png
+                const breasts = options.breasts === "cleavage" && options.breast_size >= 3
+                    ? "clothed"
+                    : "breasts";
+				
+				return `${prefix}breasts/${breasts}-${options.breast_size}.png`;                
             }
         },
 
@@ -191,7 +240,7 @@ function applySpecialBodyLayers() {
 
                     // ①-1 有資源
                     if (setup.specialBody.assets?.upper?.leftarm) {
-                        return `img/clothes/upper/${bodyFolder}/body/leftarm.png`;
+                        return setup.specialBody.assets?.upper?.leftarm;
                     }
 
                     // ①-2 無資源
@@ -199,9 +248,12 @@ function applySpecialBodyLayers() {
                 }
 
                 // ② 原版
-                if (options.mannequin) return "img/body/mannequin/leftarmidle.png";
-				if (options.arm_left === "cover") return "img/body/leftarmcover.png";
-				return `img/body/leftarmidle-${options.body_type}.png`
+                // 新版路徑：
+                // 舊版 leftarmidle-${body_type}.png / leftarmcover.png
+                // 新版 left-arm-idle-${body_type}.png / left-arm-cover.png
+                if (options.mannequin) return "img/body/mannequin/left-arm-idle.png";
+				if (options.arm_left === "cover") return "img/body/left-arm-cover.png";
+				return `img/body/left-arm-idle-${options.body_type}.png`
             }
         },
 
@@ -213,7 +265,7 @@ function applySpecialBodyLayers() {
 
                     // ①-1 有資源
                     if (setup.specialBody.assets?.upper?.rightarm) {
-                        return `img/clothes/upper/${bodyFolder}/body/rightarm.png`;
+                        return setup.specialBody.assets?.upper?.rightarm;
                     }
 
                     // ①-2 無資源
@@ -221,11 +273,12 @@ function applySpecialBodyLayers() {
                 }
 
                 // ② 原版
-                if (options.mannequin && options.handheld_position) return `img/body/mannequin/rightarm${options.handheld_position === "right_cover" ? "cover" : options.handheld_position}.png`;
-				if (options.mannequin) return "img/body/mannequin/rightarmidle.png";
-				if (options.arm_right === "cover" || options.handheld_position === "right_cover") return "img/body/rightarmcover.png";
-				if (options.handheld_position) return `img/body/rightarm${options.handheld_position}.png`;
-				return `img/body/rightarmidle-${options.body_type}.png`
+                // 新版 rightarm 不再使用 handheld_position，
+                // 主要依 options.arm_right 決定：
+                // idle / cover / hold / 其他狀態
+                if (options.mannequin) return `img/body/mannequin/right-arm-${options.arm_right}.png`;
+				if (options.arm_right === "idle") return `img/body/right-arm-idle-${options.body_type}.png`;
+				return `img/body/right-arm-${options.arm_right}.png`;
             }
         },
         
