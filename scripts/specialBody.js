@@ -454,53 +454,70 @@ function updateSpecialLayers() {
     const flag = !!setup.specialBody?.flag;
     console.log("[specialBody] 特殊身體狀態 =", flag ? "啟用" : "關閉");
 
-    setup._specialLayerBackup ??= {};
-    const patch = {};
+    // 只保存「這一次實際被我們改動的 Renderer layer」。
+    // 重要：不能用 maplebirch.char.use({ showfn: undefined }) 來還原，
+    // 因為原本沒有 showfn 與顯式 showfn: undefined 並不等價。
+    setup._specialHiddenLayerState ??= {};
 
-    specialHideLayers.forEach(name => {
-
+    for (const name of specialHideLayers) {
         const layer = Renderer?.CanvasModels?.main?.layers?.[name];
+        const state = setup._specialHiddenLayerState[name];
 
         if (!layer) {
+            if (state) delete setup._specialHiddenLayerState[name];
             console.warn(`[specialBody] 找不到圖層：${name}`);
-            return;
-        }
-
-        console.log(`[specialBody] 處理圖層：${name}`);
-
-        // 備份原始 showfn
-        if (!setup._specialLayerBackup[name]) {
-            setup._specialLayerBackup[name] = layer.showfn;
-            console.log(`[specialBody] 已備份原始 showfn：${name}`);
+            continue;
         }
 
         if (flag) {
+            // 已經隱藏同一個 layer 物件，不重複覆蓋。
+            if (state?.layer === layer && layer.showfn === state.hiddenShowfn) {
+                continue;
+            }
 
-            patch[name] = {
-                showfn() { return false; }
+            // 若 Maplebirch 已重建 layer，舊 state 不再適用；
+            // 以目前的新 layer 為準重新記錄其「原始形狀」。
+            const hadOwnShowfn = Object.prototype.hasOwnProperty.call(layer, "showfn");
+            const originalShowfn = layer.showfn;
+            const hiddenShowfn = function () { return false; };
+
+            setup._specialHiddenLayerState[name] = {
+                layer,
+                hadOwnShowfn,
+                originalShowfn,
+                hiddenShowfn
             };
 
-            console.log(`[specialBody] → 已強制隱藏：${name}`);
-
-        } else {
-
-            patch[name] = {
-                showfn: setup._specialLayerBackup[name]
-            };
-
-            console.log(`[specialBody] → 已還原顯示：${name}`);
+            layer.showfn = hiddenShowfn;
+            console.log(`[specialBody] → 暫時隱藏：${name} (原本${hadOwnShowfn ? "有" : "沒有"} showfn)`);
+            continue;
         }
 
-    });
+        // 非特姿狀態：沒有被我們動過的 layer 完全不碰。
+        if (!state) continue;
 
-    const total = Object.keys(patch).length;
-    console.log(`[specialBody] 本次套用圖層數量：${total}`);
+        // 若框架已經重建成另一個 layer 物件，代表我們當初修改的舊物件
+        // 已退出目前模型；不要拿舊資料污染新的 layer。
+        if (state.layer !== layer) {
+            delete setup._specialHiddenLayerState[name];
+            console.log(`[specialBody] → ${name} 已被框架重建，略過舊狀態還原`);
+            continue;
+        }
 
-    if (total > 0) {
-        maplebirch.char.use(patch);
-        console.log("[specialBody] 已套用圖層變更");
-    } else {
-        console.warn("[specialBody] 沒有任何圖層被修改");
+        // 只有目前仍是我們安裝的 hiddenShowfn 時才還原，避免覆蓋其它模組
+        // 在特姿期間對同一 layer 做出的新修改。
+        if (layer.showfn === state.hiddenShowfn) {
+            if (state.hadOwnShowfn) {
+                layer.showfn = state.originalShowfn;
+            } else {
+                delete layer.showfn;
+            }
+            console.log(`[specialBody] → 已還原：${name}`);
+        } else {
+            console.log(`[specialBody] → ${name} 的 showfn 已被其它邏輯改寫，不強制覆蓋`);
+        }
+
+        delete setup._specialHiddenLayerState[name];
     }
 
     console.groupEnd();

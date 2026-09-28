@@ -1,10 +1,3 @@
-# 展示圖
-* 感謝不願意具名的老師提供模組展示及範例
-
-![image](https://github.com/chris81605/Special-Pose-Extension-/blob/main/%E7%AF%84%E4%BE%8B/Image_1772368235413.jpg)
-![image](https://github.com/chris81605/Special-Pose-Extension-/blob/main/%E7%AF%84%E4%BE%8B/Image_1772368237341.png)
-![image](https://github.com/chris81605/Special-Pose-Extension-/blob/main/%E7%AF%84%E4%BE%8B/Image_1772368239354.png)
-
 # 給使用者
 * 穿上特殊姿態服裝時避免穿模
     - 服裝包作者有單獨拆身體則支援膚色效果否則不支援。
@@ -41,4 +34,5 @@
 	isSpecial:true	    <=加這個
 		
     ```
-    - 範例 https://github.com/chris81605/Special-Pose-Extension-/tree/main/%E7%AF%84%E4%BE%8B
+    
+    
