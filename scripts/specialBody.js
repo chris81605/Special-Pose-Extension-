@@ -405,9 +405,8 @@ function applySpecialBodyLayers() {
     maplebirch.char.use(layers);
 }
 
-//針對只需要隱藏不需要特殊顯示邏輯的圖層使用此函數隱藏即可
+// 特殊姿態下隱藏的圖層
 
-//隱藏列表
 const specialHideLayers = [
 
     // under_upper
@@ -454,9 +453,7 @@ function updateSpecialLayers() {
     const flag = !!setup.specialBody?.flag;
     console.log("[specialBody] 特殊身體狀態 =", flag ? "啟用" : "關閉");
 
-    // 只保存「這一次實際被我們改動的 Renderer layer」。
-    // 重要：不能用 maplebirch.char.use({ showfn: undefined }) 來還原，
-    // 因為原本沒有 showfn 與顯式 showfn: undefined 並不等價。
+    // 保存被覆寫的圖層狀態
     setup._specialHiddenLayerState ??= {};
 
     for (const name of specialHideLayers) {
@@ -470,13 +467,12 @@ function updateSpecialLayers() {
         }
 
         if (flag) {
-            // 已經隱藏同一個 layer 物件，不重複覆蓋。
+            // 避免重複覆寫同一圖層
             if (state?.layer === layer && layer.showfn === state.hiddenShowfn) {
                 continue;
             }
 
-            // 若 Maplebirch 已重建 layer，舊 state 不再適用；
-            // 以目前的新 layer 為準重新記錄其「原始形狀」。
+            // 記錄目前圖層的 showfn 狀態
             const hadOwnShowfn = Object.prototype.hasOwnProperty.call(layer, "showfn");
             const originalShowfn = layer.showfn;
             const hiddenShowfn = function () { return false; };
@@ -493,19 +489,17 @@ function updateSpecialLayers() {
             continue;
         }
 
-        // 非特姿狀態：沒有被我們動過的 layer 完全不碰。
+        // 未覆寫的圖層無需處理
         if (!state) continue;
 
-        // 若框架已經重建成另一個 layer 物件，代表我們當初修改的舊物件
-        // 已退出目前模型；不要拿舊資料污染新的 layer。
+        // 圖層重建後丟棄舊狀態
         if (state.layer !== layer) {
             delete setup._specialHiddenLayerState[name];
             console.log(`[specialBody] → ${name} 已被框架重建，略過舊狀態還原`);
             continue;
         }
 
-        // 只有目前仍是我們安裝的 hiddenShowfn 時才還原，避免覆蓋其它模組
-        // 在特姿期間對同一 layer 做出的新修改。
+        // 僅恢復本模組覆寫的 showfn
         if (layer.showfn === state.hiddenShowfn) {
             if (state.hadOwnShowfn) {
                 layer.showfn = state.originalShowfn;
