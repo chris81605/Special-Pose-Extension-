@@ -169,17 +169,13 @@ function applySpecialBodyLayers() {
     if (!model?.layers) return;
     if (!modUtils.getMod('maplebirch')) return;
 
-    const bodyFolder = V?.worn?.upper?.name;
-    const hasSpecial = !!setup.specialBody?.flag;
-    
-    
     const layers = {
 
         base: {
             srcfn(options) {
 
                 // ① 有特質
-                if (hasSpecial) {
+                if (setup.specialBody?.flag) {
 
                     // ①-1 資源存在
                     if (setup.specialBody.assets?.upper?.base) {
@@ -209,7 +205,7 @@ function applySpecialBodyLayers() {
 				const prefix = `img/body/${mannequin}`;
 				
                 // ① 有特質
-                if (hasSpecial) {
+                if (setup.specialBody?.flag) {
 
                     // ①-1 有資源
                     if (setup.specialBody.assets?.upper?.breasts) {
@@ -236,7 +232,7 @@ function applySpecialBodyLayers() {
             srcfn(options) {
 
                 // ① 有特質
-                if (hasSpecial) {
+                if (setup.specialBody?.flag) {
 
                     // ①-1 有資源
                     if (setup.specialBody.assets?.upper?.leftarm) {
@@ -261,7 +257,7 @@ function applySpecialBodyLayers() {
             srcfn(options) {
 
                 // ① 有特質
-                if (hasSpecial) {
+                if (setup.specialBody?.flag) {
 
                     // ①-1 有資源
                     if (setup.specialBody.assets?.upper?.rightarm) {
@@ -282,124 +278,6 @@ function applySpecialBodyLayers() {
             }
         },
         
-        drip_vaginal: {					
-			showfn(options) {
-				if (hasSpecial) return false;
-				return !!options.drip_vaginal;
-			}
-			
-		},
-		
-		drip_anal: {						
-			showfn(options) {
-				if (hasSpecial) return false;
-				return !!options.drip_anal;
-			}			
-		},
-		
-		cum_chest: {			
-			showfn(options) {
-			    if (hasSpecial) return false;
-				return !!options.cum_chest;
-			}
-		},
-		
-		cum_feet: {		
-			showfn(options) {
-			    if (hasSpecial) return false;
-				return !!options.cum_feet;
-			}
-		},
-		
-		cum_leftarm: {			
-			showfn(options) {
-			    if (hasSpecial) return false;
-				return options.arm_left !== "none" && options.arm_left != "cover" && !!options.cum_leftarm;
-			}
-		},
-		
-		cum_rightarm: {			
-			showfn(options) {   
-			    if (hasSpecial) return false;
-				return options.arm_right !== "none"
-					&& options.arm_right != "cover"
-					&& options.arm_right != "hold"
-					&& !!options.cum_rightarm;
-			}
-		},
-		
-		cum_neck: {			
-			showfn(options) {
-			    if (hasSpecial) return false;
-				return !!options.cum_neck;
-			}
-		},
-		
-		cum_thigh: {			
-			showfn(options) {
-			    if (hasSpecial) return false;
-				return !!options.cum_thigh;
-			}
-		},
-		
-		cum_tummy: {			
-			showfn(options) {
-			    if (hasSpecial) return false;
-				return !!options.cum_tummy;
-			}
-		},		
-		
-		writing_breasts: {			
-			showfn(options) {
-				if (hasSpecial) return false;
-				return options.show_writings && !!options.writing_breasts;
-			},
-		},  
-		
-		writing_breasts_extra: {			
-			showfn(options) {
-				if (hasSpecial) return false;
-				return options.show_writings && !!options.writing_breasts;
-			},
-		},
-		
-		writing_left_shoulder: {			
-			showfn(options) {
-				if (hasSpecial) return false;
-				return options.show_writings && !!options.writing_left_shoulder;
-			},
-		},
-		
-		writing_right_shoulder: {			
-			showfn(options) {
-				if (hasSpecial) return false;
-				return options.show_writings && !!options.writing_right_shoulder;
-			}
-		},
-		
-		writing_pubic: {
-			
-			showfn(options) {
-				if (hasSpecial) return false;
-				return options.show_writings && !!options.writing_pubic;
-			}			
-		},
-		
-		writing_left_thigh: {			
-			showfn(options) {
-				if (hasSpecial) return false;
-				return options.show_writings && !!options.writing_left_thigh;
-			}
-		},
-		
-		writing_right_thigh: {			
-			showfn(options) {
-				if (hasSpecial) return false;
-				return !!options.writing_right_thigh;
-			},
-		},
-		
-		
     };
 
     maplebirch.char.use(layers);
@@ -426,6 +304,8 @@ const specialHideLayers = [
     "under_upper_leftarm",
     "under_upper_leftarm_fitted",
     "under_upper_leftarm_fitted_acc",
+    "under_upper_rightarm_acc",
+    "under_upper_leftarm_acc",
     "under_upper_acc",
 
     // under_lower
@@ -438,80 +318,97 @@ const specialHideLayers = [
     "under_lower_detail",
     "under_lower_penis",
     "under_lower_penis_acc",
-    
+
     // legs
     "legs",
     "legs_acc",
     "legs_back_acc",
-    "legs_back"
+    "legs_back",
 
+    // fluids / cum
+    "drip_vaginal",
+    "drip_anal",
+    "cum_chest",
+    "cum_feet",
+    "cum_leftarm",
+    "cum_rightarm",
+    "cum_neck",
+    "cum_thigh",
+    "cum_tummy",
+
+    // body writings
+    "writing_breasts",
+    "writing_breasts_extra",
+    "writing_left_shoulder",
+    "writing_right_shoulder",
+    "writing_pubic",
+    "writing_left_thigh",
+    "writing_right_thigh"
 ];
+
+/*
+=========================================================
+特殊姿態圖層動態隱藏
+---------------------------------------------------------
+不再於進入特姿時把 showfn 換成 false、離開時再嘗試還原。
+每個圖層只包一層動態判斷：
+
+  特姿中   -> false
+  非特姿   -> 呼叫該圖層目前的原生 / 外部 showfn
+
+如果 Maplebirch 重建 layer，或其他模組之後重新改寫 showfn，
+下一次更新時會以新的 showfn 為基礎重新安裝 wrapper。
+=========================================================
+*/
+setup._specialHideLayerState ??= new WeakMap();
+
 function updateSpecialLayers() {
 
-    console.group("[specialBody] 更新圖層狀態");
+    console.group("[specialBody] 更新特殊姿態隱藏 wrapper");
+    console.log("[specialBody] 特殊身體狀態 =", setup.specialBody?.flag ? "啟用" : "關閉");
 
-    const flag = !!setup.specialBody?.flag;
-    console.log("[specialBody] 特殊身體狀態 =", flag ? "啟用" : "關閉");
-
-    // 保存被覆寫的圖層狀態
-    setup._specialHiddenLayerState ??= {};
+    const stateMap = setup._specialHideLayerState;
 
     for (const name of specialHideLayers) {
         const layer = Renderer?.CanvasModels?.main?.layers?.[name];
-        const state = setup._specialHiddenLayerState[name];
 
         if (!layer) {
-            if (state) delete setup._specialHiddenLayerState[name];
             console.warn(`[specialBody] 找不到圖層：${name}`);
             continue;
         }
 
-        if (flag) {
-            // 避免重複覆寫同一圖層
-            if (state?.layer === layer && layer.showfn === state.hiddenShowfn) {
-                continue;
-            }
+        const oldState = stateMap.get(layer);
 
-            // 記錄目前圖層的 showfn 狀態
-            const hadOwnShowfn = Object.prototype.hasOwnProperty.call(layer, "showfn");
-            const originalShowfn = layer.showfn;
-            const hiddenShowfn = function () { return false; };
-
-            setup._specialHiddenLayerState[name] = {
-                layer,
-                hadOwnShowfn,
-                originalShowfn,
-                hiddenShowfn
-            };
-
-            layer.showfn = hiddenShowfn;
-            console.log(`[specialBody] → 暫時隱藏：${name} (原本${hadOwnShowfn ? "有" : "沒有"} showfn)`);
+        // 已經是本模組目前安裝的 wrapper，不重複包裝。
+        if (oldState && layer.showfn === oldState.wrapper) {
             continue;
         }
 
-        // 未覆寫的圖層無需處理
-        if (!state) continue;
+        // layer 是新的，或 showfn 已被框架 / 其他模組改寫。
+        // 此刻的 showfn 就視為新的原始條件。
+        const originalShowfn = layer.showfn;
+        const hadShowfn = typeof originalShowfn === "function";
 
-        // 圖層重建後丟棄舊狀態
-        if (state.layer !== layer) {
-            delete setup._specialHiddenLayerState[name];
-            console.log(`[specialBody] → ${name} 已被框架重建，略過舊狀態還原`);
-            continue;
-        }
+        const wrapper = function(options) {
+            // 特殊姿態：指定圖層一律隱藏。
+            if (setup.specialBody?.flag) return false;
 
-        // 僅恢復本模組覆寫的 showfn
-        if (layer.showfn === state.hiddenShowfn) {
-            if (state.hadOwnShowfn) {
-                layer.showfn = state.originalShowfn;
-            } else {
-                delete layer.showfn;
+            // 普通姿態：完整交還原本的顯示條件。
+            if (hadShowfn) {
+                return originalShowfn.call(this, options);
             }
-            console.log(`[specialBody] → 已還原：${name}`);
-        } else {
-            console.log(`[specialBody] → ${name} 的 showfn 已被其它邏輯改寫，不強制覆蓋`);
-        }
 
-        delete setup._specialHiddenLayerState[name];
+            // 原本沒有 showfn 時，不額外阻止 renderer 顯示。
+            return true;
+        };
+
+        layer.showfn = wrapper;
+        stateMap.set(layer, {
+            originalShowfn,
+            wrapper
+        });
+
+        console.log(`[specialBody] → 已安裝動態隱藏：${name}`);
     }
 
     console.groupEnd();
@@ -526,6 +423,10 @@ function specialBodyRefresh(useFullRedraw = true, delay = 50) {
         // 重新檢測 upper 特殊資源
         await detectSpecialUpperAssets();
         applySpecialBodyLayers();
+
+        // maplebirch.char.use() 可能更新 / 重建 layer，
+        // 因此必須在它之後重新確認特殊姿態隱藏 wrapper。
+        updateSpecialLayers();
 
         if (useFullRedraw) {
             // 清空整個 Canvas Model Cache
