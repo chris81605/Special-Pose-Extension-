@@ -169,6 +169,33 @@ function applySpecialBodyLayers() {
     if (!model?.layers) return;
     if (!modUtils.getMod('maplebirch')) return;
 
+    /*
+     * 第一次接管圖層前，保存當下環境已存在的 srcfn。
+     *
+     * 這裡保存的是 upstream 定義，不一定是 DoL 原版：
+     * 如果其他模組已經先修改 body layer（例如 Fox paws），
+     * 特姿關閉時就應完整交還該定義，而不是硬編碼 vanilla 路徑。
+     *
+     * specialBodyRefresh() 會反覆呼叫本函式，因此只允許保存一次，
+     * 避免後續把特姿自己的 wrapper 再當成 upstream，形成多層包裝。
+     */
+    setup._specialBodyUpstreamSrcfn ??= {};
+    const upstream = setup._specialBodyUpstreamSrcfn;
+
+    for (const name of ["base", "breasts", "leftarm", "rightarm"]) {
+        if (!(name in upstream)) {
+            const srcfn = model.layers?.[name]?.srcfn;
+            upstream[name] = typeof srcfn === "function" ? srcfn : null;
+        }
+    }
+
+    const callUpstream = (name, context, options) => {
+        const srcfn = upstream[name];
+        return typeof srcfn === "function"
+            ? srcfn.call(context, options)
+            : null;
+    };
+
     const layers = {
 
         base: {
@@ -186,26 +213,17 @@ function applySpecialBodyLayers() {
                     return null;
                 }
 
-                // ② 原版
-                // 新版路徑：
-                // 舊版 basenoarms-${options.body_type}.png
-                // 新版 base-${options.body_type}.png
-                return options.mannequin
-                    ? "img/body/mannequin/base-body.png"
-                    : `img/body/base-${options.body_type}.png`;
+                // ② 非特姿：完整交還第一次接管前的圖層定義
+                return callUpstream("base", this, options);
             }
         },
 
         breasts: {
             srcfn(options) {
 
-                if (options.mannequin) return null;
-                
-                const mannequin = (options.mannequin) ? "mannequin/" : "";
-				const prefix = `img/body/${mannequin}`;
-				
                 // ① 有特質
                 if (setup.specialBody?.flag) {
+                    if (options.mannequin) return null;
 
                     // ①-1 有資源
                     if (setup.specialBody.assets?.upper?.breasts) {
@@ -216,15 +234,8 @@ function applySpecialBodyLayers() {
                     return null;
                 }
 
-                // ② 原版
-                // 新版路徑：
-                // 舊版 breasts${size}.png / breasts${size}_clothed.png
-                // 新版 breasts-${size}.png / clothed-${size}.png
-                const breasts = options.breasts === "cleavage" && options.breast_size >= 3
-                    ? "clothed"
-                    : "breasts";
-				
-				return `${prefix}breasts/${breasts}-${options.breast_size}.png`;                
+                // ② 非特姿：完整交還第一次接管前的圖層定義
+                return callUpstream("breasts", this, options);
             }
         },
 
@@ -243,13 +254,8 @@ function applySpecialBodyLayers() {
                     return null;
                 }
 
-                // ② 原版
-                // 新版路徑：
-                // 舊版 leftarmidle-${body_type}.png / leftarmcover.png
-                // 新版 left-arm-idle-${body_type}.png / left-arm-cover.png
-                if (options.mannequin) return "img/body/mannequin/left-arm-idle.png";
-				if (options.arm_left === "cover") return "img/body/left-arm-cover.png";
-				return `img/body/left-arm-idle-${options.body_type}.png`
+                // ② 非特姿：完整交還第一次接管前的圖層定義
+                return callUpstream("leftarm", this, options);
             }
         },
 
@@ -268,16 +274,11 @@ function applySpecialBodyLayers() {
                     return null;
                 }
 
-                // ② 原版
-                // 新版 rightarm 不再使用 handheld_position，
-                // 主要依 options.arm_right 決定：
-                // idle / cover / hold / 其他狀態
-                if (options.mannequin) return `img/body/mannequin/right-arm-${options.arm_right}.png`;
-				if (options.arm_right === "idle") return `img/body/right-arm-idle-${options.body_type}.png`;
-				return `img/body/right-arm-${options.arm_right}.png`;
+                // ② 非特姿：完整交還第一次接管前的圖層定義
+                return callUpstream("rightarm", this, options);
             }
         },
-        
+
     };
 
     maplebirch.char.use(layers);
